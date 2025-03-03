@@ -8,45 +8,38 @@ use {
         program_pack::Pack,
         pubkey::Pubkey,
     },
-    spl_token::{
-        instruction::transfer_checked,
-        state::{Account, Mint},
-    },
+    spl_token::{instruction::transfer_checked, state::Mint},
 };
 
 solana_program::entrypoint!(process_instruction);
 pub fn process_instruction(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
-    _instruction_data: &[u8],
+    instruction_data: &[u8],
 ) -> ProgramResult {
     let account_info_iter = &mut accounts.iter();
 
-    // As part of the program specification the instruction gives:
+    // Accounts need to transfer
     let source_info = next_account_info(account_info_iter)?; // 1.
     let mint_info = next_account_info(account_info_iter)?; // 2.
     let destination_info = next_account_info(account_info_iter)?; // 3.
     let authority_info = next_account_info(account_info_iter)?; // 4.
     let token_program_info = next_account_info(account_info_iter)?; // 5.
 
-    // In order to transfer from the source account, owned by the program-derived
-    // address, we must have the correct address and seeds.
+    // check PDA Account by finding 'authority'
     let (expected_authority, bump_seed) = Pubkey::find_program_address(&[b"authority"], program_id);
     if expected_authority != *authority_info.key {
         return Err(ProgramError::InvalidSeeds);
     }
 
-    // The program transfers everything out of its account, so extract that from
-    // the account data.
-    let source_account = Account::unpack(&source_info.try_borrow_data()?)?;
-    let transfer_amount = source_account.amount;
+    // get transfer value from trancfer instruction
+    let transfer_amount = u64::from_le_bytes(instruction_data.try_into().unwrap());
 
-    // The program uses `transfer_checked`, which requires the number of decimals
-    // in the mint, so extract that from the account data too.
+    // The program uses `transfer_checked`, which requires the number of decimals from Mint Account
     let mint = Mint::unpack(&mint_info.try_borrow_data()?)?;
     let token_decimals = mint.decimals;
 
-    // Invoke the transfer
+    // Invoke Token Transfer
     msg!("Attempting to transfer {} tokens", transfer_amount);
     invoke_signed(
         &transfer_checked(
@@ -67,6 +60,7 @@ pub fn process_instruction(
             authority_info.clone(),
             token_program_info.clone(), // not required, but better for clarity
         ],
+        // use bump_seed as PDA sign
         &[&[b"authority", &[bump_seed]]],
     )
 }

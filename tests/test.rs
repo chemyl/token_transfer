@@ -1,5 +1,4 @@
 use token_transfer::process_instruction;
-
 use {
     solana_program::{
         instruction::{AccountMeta, Instruction},
@@ -8,7 +7,7 @@ use {
         rent::Rent,
         system_instruction,
     },
-    solana_program_test::{processor, tokio, ProgramTest},
+    solana_program_test::{ProgramTest, processor, tokio},
     solana_sdk::{signature::Signer, signer::keypair::Keypair, transaction::Transaction},
     spl_token::state::{Account, Mint},
     std::str::FromStr,
@@ -134,17 +133,20 @@ async fn success() {
     // run transaction on test blockchain
     banks_client.process_transaction(transaction).await.unwrap();
 
+    let transfer_amount: u64 = 5000;
+    let instruction_data = transfer_amount.to_le_bytes(); // 8 байт LE
+
     // Create an function that invoke 'process_instruction'
     let transaction = Transaction::new_signed_with_payer(
         &[Instruction::new_with_bincode(
             program_id,
-            &(),
+            &(instruction_data),
             vec![
-                AccountMeta::new(source.pubkey(), false),               // from
-                AccountMeta::new_readonly(mint.pubkey(), false),        // token
-                AccountMeta::new(destination.pubkey(), false),          // destination
-                AccountMeta::new_readonly(authority_pubkey, false),     // PDA for authorization
-                AccountMeta::new_readonly(spl_token::id(), false),      // SLP programm
+                AccountMeta::new(source.pubkey(), false),           // from
+                AccountMeta::new_readonly(mint.pubkey(), false),    // token
+                AccountMeta::new(destination.pubkey(), false),      // destination
+                AccountMeta::new_readonly(authority_pubkey, false), // PDA for authorization
+                AccountMeta::new_readonly(spl_token::id(), false),  // SLP programm
             ],
         )],
         Some(&payer.pubkey()),
@@ -152,7 +154,7 @@ async fn success() {
         recent_blockhash,
     );
 
-    // process the transfer transaction 
+    // process the transfer transaction
     banks_client.process_transaction(transaction).await.unwrap();
 
     // Check that the destination account now has `amount` tokens
@@ -161,7 +163,7 @@ async fn success() {
         .await
         .unwrap()
         .unwrap();
-    // get destination account state
+    // get destination account
     let token_account = Account::unpack(&account.data).unwrap();
-    assert_eq!(token_account.amount, amount);
+    assert_eq!(token_account.amount, transfer_amount);
 }
