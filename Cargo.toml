@@ -4,4 +4,12 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-solana-program = "1.17.7"
+solana-program = "1.17.6"
+spl-token = { version = "4.0", features = [ "no-entrypoint" ] }
+
+[dev-dependencies]
+solana-program-test = "1.17.6"
+solana-sdk = "1.17.6"
+
+[lib]
+crate-type = ["cdylib", "lib"]

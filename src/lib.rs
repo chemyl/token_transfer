@@ -1,10 +1,25 @@
+use {
+    solana_program::{
+        account_info::{AccountInfo, next_account_info},
+        entrypoint::ProgramResult,
+        msg,
+        program::invoke_signed,
+        program_error::ProgramError,
+        program_pack::Pack,
+        pubkey::Pubkey,
+    },
+    spl_token::{
+        instruction::transfer_checked,
+        state::{Account, Mint},
+    },
+};
+
 solana_program::entrypoint!(process_instruction);
 pub fn process_instruction(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
     _instruction_data: &[u8],
 ) -> ProgramResult {
-    // Create an iterator to safely reference accounts in the slice
     let account_info_iter = &mut accounts.iter();
 
     // As part of the program specification the instruction gives:
@@ -24,15 +39,15 @@ pub fn process_instruction(
     // The program transfers everything out of its account, so extract that from
     // the account data.
     let source_account = Account::unpack(&source_info.try_borrow_data()?)?;
-    let amount = source_account.amount;
+    let transfer_amount = source_account.amount;
 
     // The program uses `transfer_checked`, which requires the number of decimals
     // in the mint, so extract that from the account data too.
     let mint = Mint::unpack(&mint_info.try_borrow_data()?)?;
-    let decimals = mint.decimals;
+    let token_decimals = mint.decimals;
 
     // Invoke the transfer
-    msg!("Attempting to transfer {} tokens", amount);
+    msg!("Attempting to transfer {} tokens", transfer_amount);
     invoke_signed(
         &transfer_checked(
             token_program_info.key,
@@ -41,8 +56,8 @@ pub fn process_instruction(
             destination_info.key,
             authority_info.key,
             &[], // no multisig allowed
-            amount,
-            decimals,
+            transfer_amount,
+            token_decimals,
         )
         .unwrap(),
         &[
