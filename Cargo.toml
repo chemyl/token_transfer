@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 borsh = "1.2.1"
 solana-program = "1.17.6"
-spl-token = { version = "4.0", features = [ "no-entrypoint" ] }
+spl-token = "4.0"
 
 [dev-dependencies]
 solana-program-test = "1.17.6"

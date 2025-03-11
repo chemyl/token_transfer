@@ -1,4 +1,4 @@
-use token_transfer::process_instruction;
+use token_transfer::processor::process_instruction;
 use {
     solana_program::{
         instruction::{AccountMeta, Instruction},
